@@ -23,13 +23,17 @@ def make_city_name():
     return first_word + " " + second_word
 
 #funkcija koja cita gradove iz fajla i pravi listu objekata tipa City
-def read_cities():
+def read_cities(file_name):
     cities=[]
-    with open(project_folder+"/Data/data_tsp.txt") as file:
-        lines=file.readlines()
-        for line in lines:
-            city_data=line.split(" ")
-            new_city=City(int(city_data[0]),float(city_data[1]),float(city_data[2]))
-            cities.append(new_city)
-
+    try:
+        with open(project_folder+"/Data/"+file_name) as file:
+            lines=file.readlines()
+            for line in lines:
+                city_data=line.split(" ")
+                new_city=City(int(city_data[0]),float(city_data[1]),float(city_data[2]))
+                cities.append(new_city)
+    except:
+        print("Greska pri ucitavanju fajla sa gradovima. Koristice se podrazumevani fajl (data_tsp.txt).")
+        return None
+    
     return cities

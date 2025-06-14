@@ -54,22 +54,24 @@ def mutate_child(child):
     child.distance = child.calculate_full_distance()
 
 #glavna funkcija koja implementira genetski algoritam
-def genetic_algorithm(population_size, generations, mutation_rate, cities, procent_of_protection, procent_of_keep):
+def genetic_algorithm(population_size, generations,same_stoppage, mutation_rate, cities, percent_of_protection, percent_of_keep,max_repeat, percent_of_reset):
     #pravimo pocetnu populaciju
     population=make_initial_population(population_size,cities)
     
     #prolazimo kroz sve generacije
+    repeat_count = 0
+    stoppage_count = 0
+    last_value=0
     for generation in range(generations):
         # smanjujemo stopu mutacije sa svakom generacijom
-        mutation_rate = mutation_rate * (1 - generation / generations)
+        #mutation_rate = mutation_rate * (1 - generation / generations)
 
         #sortiramo populaciju po kvalitetu (udaljenosti)
         population.sort(key=lambda individual: individual.distance, reverse=True)
-
-        print(f"Generation {generation + 1}: Best distance = {population[-1].distance}")
+        #print(f"Generation {generation + 1}: Best distance = {population[-1].distance}")
 
         #ako dete upada u bar top procent populacije, ne mutiramo ga
-        min_for_protection = population[-int(population_size * procent_of_protection)].distance
+        min_for_protection = population[-int(population_size * percent_of_protection)].distance
 
         #pravimo rangiranu populaciju
         ranked_population = []
@@ -107,9 +109,38 @@ def genetic_algorithm(population_size, generations, mutation_rate, cities, proce
             new_generation.append(child2)
 
         #biramo koga izbacujemo iz populacije, cuvamo n najboljih jedinki iz stare generacije i popunjavamo sa novom generacijom
-        number_of_keep = int(population_size * procent_of_keep)
+        number_of_keep = int(population_size * percent_of_keep)
         new_generation.sort(key=lambda individual: individual.distance)
+
+        new_best=0
+        if new_generation[0].distance < population[-1].distance:
+            new_best = new_generation[0].distance
+        else:
+            new_best = population[-1].distance
+
         population = population[population_size - number_of_keep:] + new_generation[:population_size - number_of_keep]
+
+        #proveravamo da li je algoritam konvergirao
+        if new_best == last_value:
+            repeat_count += 1
+            stoppage_count += 1
+        else:
+            repeat_count = 0
+            stoppage_count = 0
+            last_value = new_best
+
+        #ako se algoritam previse ponavlja i sa resetom populacije ne moze da se pomeri, prekidamo ga
+        if stoppage_count >= same_stoppage:
+            #print(f"Stopping algorithm at generation {generation + 1} due to stagnation.")
+            break
+
+        #ako se algoritam ponavlja, resetujemo deo populacije
+        if repeat_count >= max_repeat:
+            #print(f"Resetting population at generation {generation + 1}")
+            new_population = make_initial_population(int(population_size * percent_of_reset), cities)
+            population.sort(key=lambda individual: individual.distance)
+            population = population[:population_size - int(population_size * percent_of_reset)] + new_population
+            repeat_count = 0
 
     #sortiramo poslednju populaciju po kvalitetu (udaljenosti) i vracamo najbolju jedinku
     population.sort(key=lambda individual: individual.distance)
