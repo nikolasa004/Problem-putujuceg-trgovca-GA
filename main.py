@@ -1,6 +1,8 @@
 import City
 import GeneticAlgorithm
 import multiprocessing as mp
+import ResultsOnlyGui
+import InteractiveGui
 
 #konstante
 CONST_FILE_NAME = "data_tsp.txt"
@@ -124,6 +126,7 @@ if __name__ == "__main__":
 
     result = None
     parallel_results = []
+    gui_result = []
     print("Molim vas, sacekajte dok se algoritam izvrsava...")
     if not multiple_instances:
         result=GeneticAlgorithm.genetic_algorithm(population_size, generations, same_stoppage, mutation_rate, cities, percent_of_protection, percent_of_keep, max_repeat, percent_of_reset)
@@ -132,7 +135,10 @@ if __name__ == "__main__":
             results = [pool.apply_async(GeneticAlgorithm.genetic_algorithm, (population_size, generations, same_stoppage, mutation_rate, cities, percent_of_protection, percent_of_keep, max_repeat, percent_of_reset)) for _ in range(number_of_instances)]
             for async_individual in results:
                 parallel_results.append(async_individual.get().distance)
+                gui_result.append(async_individual.get())
             result = min(results, key=lambda async_individual: async_individual.get().distance).get()
+            gui_result.sort(key=lambda r: r.distance)
+
 
     while True:
         print("Koji tip interfejsa zelite da koristite za prikaz rezultata?")
@@ -173,11 +179,14 @@ if __name__ == "__main__":
 
             choice = input("Unesite broj opcije: ")
             if choice == "1":
-                #ovde bi trebalo da se pokrene GUI koji omogucava interakciju sa korisnikom
-                pass
+                InteractiveGui.run_interactive_mode(cities, result.distance)
             elif choice == "2":
-                # ovde bi trebalo da se pokrene GUI koji samo prikazuje rezultate
-                pass
+                if not multiple_instances:
+                    ResultsOnlyGui.draw_results(result.genes)
+                else:
+                    
+                    ResultsOnlyGui.draw_results(gui_result[0].genes)
+
             elif choice == "3":
                 print("Izlaz iz programa...")
                 exit(0)
