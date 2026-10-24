@@ -26,7 +26,7 @@ def compute_max_coordinates(cities):
 def load_block_images():
     images = []
     for i in range(1, 11):
-        image = pygame.image.load(f"Pictures/BackgroundBlocks/block{i}.png").convert_alpha()
+        image = pygame.image.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Pictures", "BackgroundBlocks", f"block{i}.png")).convert_alpha()
         image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
         images.append(image)
     return images
@@ -34,7 +34,7 @@ def load_block_images():
 def load_decor_images():
     images = []
     for i in range(1, 11):
-        image = pygame.image.load(f"Pictures/Decorations/Decor{i}.png").convert_alpha()
+        image = pygame.image.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Pictures", "Decorations", f"Decor{i}.png")).convert_alpha()
         image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
         images.append(image)
     return images
@@ -42,7 +42,7 @@ def load_decor_images():
 def load_city_images():
     images = []
     for i in range(1, 11):
-        image = pygame.image.load(f"Pictures/Cities/city{i}.png").convert_alpha()
+        image = pygame.image.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Pictures", "Cities", f"City{i}.png")).convert_alpha()
         image = pygame.transform.scale(image, (TILE_SIZE, TILE_SIZE))
         images.append(image)
     return images
@@ -107,20 +107,20 @@ def draw_cities(cities, city_icons, screen):
 def draw_path(cities, step, screen, color=(0, 0, 0), width=2):
     font = pygame.font.SysFont(None, 14)
     for i in range(step):
-        if i >= len(cities) - 1:
-            break
         city1 = cities[i]
-        city2 = cities[i + 1]
+        city2 = cities[(i + 1) % len(cities)]
         x1 = int(city1.x * scale)
         y1 = int(city1.y * scale)
-        x2 = int(city2.x * scale)
-        y2 = int(city2.y * scale)
+        x2, y2 = int(city2.x * scale), int(city2.y * scale)
         pygame.draw.line(screen, color, (x1, y1), (x2, y2), width)
         distance = math.sqrt((city1.x - city2.x) ** 2 + (city1.y - city2.y) ** 2)
         distance_text = font.render(f"{distance:.1f}", True, (255, 255, 255))
         screen.blit(distance_text, ((x1 + x2) // 2, (y1 + y2) // 2))
 
 def draw_results(cities):
+    global scale
+    max_city_x, max_city_y = compute_max_coordinates(cities)
+    scale = min((SCREEN_WIDTH - TILE_SIZE) / max(max_city_x, 1), (SCREEN_HEIGHT - TILE_SIZE) / max(max_city_y, 1))
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Problem putujućeg trgovca")
@@ -141,7 +141,7 @@ def draw_results(cities):
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
-                    if step < len(cities) - 1:
+                    if step < len(cities):
                         step += 1
 
         draw_background(screen, block_images, decor_positions)

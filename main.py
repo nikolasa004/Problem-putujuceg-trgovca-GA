@@ -3,6 +3,7 @@ import GeneticAlgorithm
 import multiprocessing as mp
 import ResultsOnlyGui
 import InteractiveGui
+import TwoOpt
 
 #konstante
 CONST_FILE_NAME = "data_tsp.txt"
@@ -48,6 +49,10 @@ if __name__ == "__main__":
         file_name = CONST_FILE_NAME
         cities = City.read_cities(file_name)
 
+    if cities is None or len(cities) < 2:
+        print("Nije moguce pokrenuti algoritam bez najmanje dva grada.")
+        exit(1)
+
     #da li da koristimo vise instanci algoritma
     while True:
         print("Da li zelite da koristite vise instanci algoritma za resavanje problema putujuceg trgovca?")
@@ -59,14 +64,14 @@ if __name__ == "__main__":
             multiple_instances = True
 
             #koliko instanci da koristimo
-            print("Koliko instanci zelite da koristite? (preporuceno " + str(mp.cpu_count()-1) + " ili manje)")
+            print("Koliko instanci zelite da koristite? (preporuceno " + str(max(1, mp.cpu_count()-1)) + " ili manje)")
             try:
                 number_of_instances = int(input("Unesite broj instanci: "))
                 if number_of_instances <= 0 or number_of_instances > mp.cpu_count():
-                    print("Broj instanci mora biti izmedju 1 i " + str(mp.cpu_count()) + ". Koristicemo podrazumevani broj instanci (" + str(mp.cpu_count()-1) + ").")
+                    print("Broj instanci mora biti izmedju 1 i " + str(mp.cpu_count()) + ". Koristicemo podrazumevani broj instanci (" + str(max(1, mp.cpu_count()-1)) + ").")
                     number_of_instances = mp.cpu_count() - 1
             except ValueError:
-                print("Neispravan unos, koristimo podrazumevani broj instanci (" + str(mp.cpu_count()-1) + ").")
+                print("Neispravan unos, koristimo podrazumevani broj instanci (" + str(max(1, mp.cpu_count()-1)) + ").")
                 number_of_instances = mp.cpu_count() - 1
 
             break
@@ -124,6 +129,10 @@ if __name__ == "__main__":
         else:
             print("Nepoznata opcija, molimo unesite ponovo.")
 
+    if population_size < 2 or population_size % 2 != 0 or generations < 1 or same_stoppage < 1 or max_repeat < 1 or not (0 < percent_of_protection <= 1) or not (0 <= percent_of_keep < 1) or not (0 <= percent_of_reset <= 1) or not (0 <= mutation_rate <= 1):
+        print("Neispravni parametri: populacija mora biti paran broj >= 2, brojevi generacija i ponavljanja pozitivni, a stope i procenti u opsegu od 0 do 1.")
+        exit(1)
+
     result = None
     parallel_results = []
     gui_result = []
@@ -139,6 +148,24 @@ if __name__ == "__main__":
             result = min(results, key=lambda async_individual: async_individual.get().distance).get()
             gui_result.sort(key=lambda r: r.distance)
 
+    original_result = result
+    while True:
+        print("Da li zelite da primenite 2-opt za lokalno poboljsanje GA resenja?")
+        print("1. Da")
+        print("2. Ne")
+        choice = input("Unesite broj opcije: ")
+        if choice == "1":
+            result = TwoOpt.two_opt(original_result)
+            print("Originalna GA udaljenost:", original_result.distance)
+            print("Udaljenost nakon 2-opt:", result.distance)
+            print("Poboljsanje:", original_result.distance - result.distance)
+            print("GA putanja:", [city.id for city in original_result.genes])
+            print("2-opt putanja:", [city.id for city in result.genes])
+            break
+        elif choice == "2":
+            break
+        else:
+            print("Nepoznata opcija, molimo unesite ponovo.")
 
     while True:
         print("Koji tip interfejsa zelite da koristite za prikaz rezultata?")
@@ -181,11 +208,7 @@ if __name__ == "__main__":
             if choice == "1":
                 InteractiveGui.run_interactive_mode(cities, result.distance)
             elif choice == "2":
-                if not multiple_instances:
-                    ResultsOnlyGui.draw_results(result.genes)
-                else:
-                    
-                    ResultsOnlyGui.draw_results(gui_result[0].genes)
+                ResultsOnlyGui.draw_results(result.genes)
 
             elif choice == "3":
                 print("Izlaz iz programa...")

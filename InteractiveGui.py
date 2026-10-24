@@ -1,9 +1,11 @@
 import pygame
 import random
+import os
 from City import City
 from Individual import Individual
 
 # Konstantne vrednosti
+project_folder = os.path.dirname(os.path.abspath(__file__))
 tile_size = 32
 tiles_x = 40
 tiles_y = 25
@@ -26,7 +28,7 @@ def calculate_scale(cities):
 def assign_city_icons(cities):
     city_images = []
     for i in range(1, 11):
-        img = pygame.image.load(f"Pictures/Cities/city{i}.png").convert_alpha()
+        img = pygame.image.load(os.path.join(project_folder, "Pictures", "Cities", f"City{i}.png")).convert_alpha()
         img = pygame.transform.scale(img, (tile_size, tile_size))
         city_images.append(img)
     return [random.choice(city_images) for _ in cities]
@@ -84,14 +86,16 @@ def draw_cities(screen, cities, city_icons, scale, font):
         name_surface = font.render(city.name, True, BLACK)
         screen.blit(name_surface, (x - tile_size // 2, y + tile_size // 2))
 
-def draw_player_path(screen, path, scale):
+def draw_player_path(screen, path, scale, total_cities):
     for i in range(len(path) - 1):
         x1, y1 = int(path[i].x * scale), int(path[i].y * scale)
         x2, y2 = int(path[i + 1].x * scale), int(path[i + 1].y * scale)
         pygame.draw.line(screen, BLACK, (x1, y1), (x2, y2), 2)
+    if len(path) == total_cities and len(path) > 1:
+        pygame.draw.line(screen, BLACK, (int(path[-1].x * scale), int(path[-1].y * scale)), (int(path[0].x * scale), int(path[0].y * scale)), 2)
 
-def draw_remaining_info(screen, cities, selected_names, font):
-    remaining = [city for city in cities if city.name not in selected_names]
+def draw_remaining_info(screen, cities, selected_ids, font):
+    remaining = [city for city in cities if city.id not in selected_ids]
     remaining_count = len(remaining)
     
     # Prikaži broj preostalih gradova u gornjem desnom uglu
@@ -166,13 +170,13 @@ def run_interactive_mode(cities, algorithm_result):
     # Učitavanje slika
     block_images = []
     for i in range(1, 11):
-        img = pygame.image.load(f"Pictures/BackgroundBlocks/block{i}.png").convert_alpha()
+        img = pygame.image.load(os.path.join(project_folder, "Pictures", "BackgroundBlocks", f"block{i}.png")).convert_alpha()
         img = pygame.transform.scale(img, (tile_size, tile_size))
         block_images.append(img)
 
     decor_images = []
     for i in range(1, 11):
-        img = pygame.image.load(f"Pictures/Decorations/Decor{i}.png").convert_alpha()
+        img = pygame.image.load(os.path.join(project_folder, "Pictures", "Decorations", f"Decor{i}.png")).convert_alpha()
         img = pygame.transform.scale(img, (tile_size, tile_size))
         decor_images.append(img)
 
@@ -182,7 +186,7 @@ def run_interactive_mode(cities, algorithm_result):
     city_icons = assign_city_icons(cities)
 
     selected_path = []
-    selected_names = set()
+    selected_ids = set()
     undo_stack = []
     done = False
 
@@ -190,8 +194,8 @@ def run_interactive_mode(cities, algorithm_result):
         screen.fill(WHITE)
         draw_background(screen, background_map, block_images, decor_positions)
         draw_cities(screen, cities, city_icons, scale, font)
-        draw_player_path(screen, selected_path, scale)
-        draw_remaining_info(screen, cities, selected_names, font)
+        draw_player_path(screen, selected_path, scale, len(cities))
+        draw_remaining_info(screen, cities, selected_ids, font)
 
 
         for event in pygame.event.get():
@@ -199,16 +203,15 @@ def run_interactive_mode(cities, algorithm_result):
                 done = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 clicked_city = find_clicked_city(cities, pygame.mouse.get_pos(), scale)
-                if clicked_city and clicked_city.name not in selected_names:
-                    undo_stack.append((selected_path.copy(), selected_names.copy()))
+                if clicked_city and clicked_city.id not in selected_ids:
+                    undo_stack.append((selected_path.copy(), selected_ids.copy()))
                     if len(undo_stack) > 5:
                         undo_stack.pop(0)
                     selected_path.append(clicked_city)
-                    selected_names.add(clicked_city.name)
+                    selected_ids.add(clicked_city.id)
                     
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and len(selected_path) == len(cities):
-                    selected_path.append(selected_path[0])
                     user_individual = Individual(selected_path)
                     user_distance = user_individual.distance
                     result_distance = algorithm_result
@@ -218,11 +221,12 @@ def run_interactive_mode(cities, algorithm_result):
 
                 elif event.key == pygame.K_r:
                     selected_path.clear()
-                    selected_names.clear()
+                    selected_ids.clear()
+                    undo_stack.clear()
                     print("Putanja resetovana.")
                 elif event.key == pygame.K_z:
                     if undo_stack:
-                        selected_path, selected_names = undo_stack.pop()
+                        selected_path, selected_ids = undo_stack.pop()
                         print("Vraćen je prethodni korak.")
                     else:
                         print("Nema više koraka za vraćanje.")
